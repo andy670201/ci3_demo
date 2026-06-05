@@ -31,7 +31,16 @@ docker compose up -d --build
 ### 3. 匯入資料庫（首次需執行一次）
 
 ```bash
+# Linux
 docker exec -i ci3-db mysql -u admin -ppassword < src/database.sql
+```
+```bash
+# Windows
+# 第一步：把 sql 檔案複製進容器
+docker cp src/database.sql ci3-db:/tmp/database.sql
+
+# 第二步：在容器內直接執行（完全不經過 PowerShell 編碼轉換）
+docker exec -i ci3-db mysql -u admin -ppassword --default-character-set=utf8mb4 ci3_fashion -e "source /tmp/database.sql"
 ```
 
 ### 4. 開啟瀏覽器

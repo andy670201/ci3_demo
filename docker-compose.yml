@@ -1,28 +1,60 @@
+# ============================================================
+# CI3 Fashion - Docker Compose 設定檔
+# 包含三個服務：PHP/Apache 網頁伺服器、MySQL 資料庫、phpMyAdmin
+# ============================================================
+
 services:
+
+  # ----------------------------------------------------------
+  # web：PHP 8.2 + Apache 網頁伺服器
+  # 建置來源：使用根目錄的 Dockerfile
+  # 對外port：本機 8080 → 容器 80
+  # 掛載目錄：./src 對應容器內 /var/www/html（網站根目錄）
+  # ----------------------------------------------------------
   web:
     build: .
     container_name: ci3-web
     ports:
       - "8080:80"
     volumes:
-      - ./src:/var/www/html
+      - ./src:/var/www/html    # 本機 src/ 目錄掛載為網站根目錄
     depends_on:
-      - db
+      - db                     # 確保 db 容器先啟動
 
+  # ----------------------------------------------------------
+  # db：MySQL 8.0 資料庫
+  # 強制指定 utf8mb4 字元集，避免 Windows 環境中文亂碼
+  # 資料持久化：使用 named volume ci3_db_data
+  # ----------------------------------------------------------
   db:
     image: mysql:8.0
     container_name: ci3-db
-    restart: always
+    restart: always            # 容器異常停止時自動重啟
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: ci3_fashion
-      MYSQL_USER: admin
-      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: root        # root 帳號密碼
+      MYSQL_DATABASE: ci3_fashion      # 自動建立的資料庫名稱
+      MYSQL_USER: admin                # 應用程式使用的帳號
+      MYSQL_PASSWORD: password         # 應用程式使用的密碼
+      MYSQL_CHARSET: utf8mb4           # 預設字元集
+      MYSQL_COLLATION: utf8mb4_unicode_ci  # 預設排序規則
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --init-connect='SET NAMES utf8mb4'
+    # 說明：
+    # character-set-server  → 伺服器預設字元集
+    # collation-server      → 伺服器預設排序規則
+    # init-connect          → 每次連線時自動執行，確保連線編碼為 utf8mb4
     ports:
-      - "3306:3306"
+      - "3306:3306"            # 本機 3306 → 容器 3306（可用外部工具連線）
     volumes:
-      - ci3_db_data:/var/lib/mysql   # 加這行，資料庫資料才不會消失
+      - ci3_db_data:/var/lib/mysql  # 資料庫檔案持久化，容器刪除資料不會消失
 
+  # ----------------------------------------------------------
+  # phpmyadmin：資料庫管理介面
+  # 對外port：本機 8081 → 容器 80
+  # 網址：http://localhost:8081
+  # ----------------------------------------------------------
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
     container_name: ci3-pma
@@ -30,9 +62,15 @@ services:
     ports:
       - "8081:80"
     environment:
-      PMA_HOST: db
+      PMA_HOST: db             # 指定連線到 db 服務（使用服務名稱，非 localhost）
     depends_on:
-      - db
+      - db                     # 確保 db 容器先啟動
 
+# --------------------------------------------------------------
+# Volumes 宣告
+# ci3_db_data：MySQL 資料持久化 volume
+# 即使執行 docker compose down，資料仍會保留
+# 若要完全清除資料，需執行 docker compose down -v
+# --------------------------------------------------------------
 volumes:
-  ci3_db_data:    # 宣告 volume，資料持久化
+  ci3_db_data:
