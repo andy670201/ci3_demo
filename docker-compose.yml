@@ -14,6 +14,7 @@ services:
   web:
     build: .
     container_name: ci3-web
+    restart: unless-stopped
     ports:
       - "8080:80"
     volumes:
@@ -29,7 +30,7 @@ services:
   db:
     image: mysql:8.0
     container_name: ci3-db
-    restart: unless-stopped            # 容器異常停止時自動重啟
+    restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: root        # root 帳號密碼
       MYSQL_DATABASE: ci3_fashion      # 自動建立的資料庫名稱
